@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from problem.prob import ZDT1
-from problem.sc_prob import SharedComponents
+from problem.prob import *
+from problem.sc_prob import *
 import pandas as pd
 from datetime import datetime
+from pymoo.indicators.hv import HV
 
 plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']  # 设置中文字体
  
@@ -169,7 +170,12 @@ class NSGA:
         return selected
     
     def randSelect(self, f, cv, scv, n, prob=0.5, k=2):
-        hv = np.sum(f, axis=(1, 2))
+        f_max = []
+        for i in range(self.problem.sub_prob.n_obj):
+            f_max.append(np.max(f[:, :, i]))
+        f_max = np.array(f_max)
+        hv_c = HV(ref_point=f_max)
+        hv = [hv_c.do(sub_f) for sub_f in f]
         cv_sum = np.sum(cv, axis=(1, 2))
         scv_sum = np.sum(scv, axis=1)
         selected = np.zeros(n, dtype=int)
@@ -241,14 +247,13 @@ class NSGA:
                         
             # 变异
             prob = np.random.rand(self.pop_size, self.sub_pop_size, self.problem.sub_prob.n_var)
-            offspring_pop += (np.random.randint(0, 1) - 0.5) * prob * (self.problem.sub_prob.xu - self.problem.sub_prob.xl) * 0.1
+            # offspring_pop += (np.random.randint(0, 1) - 0.5) * prob * (self.problem.sub_prob.xu - self.problem.sub_prob.xl) * 0.1
             for i in range(self.pop_size):
                 idx = np.random.randint(0, self.problem.n_var)
                 diff = (np.random.randint(0, 1) - 0.5) * np.random.rand() * (self.problem.sub_prob.xu[idx] - self.problem.sub_prob.xl[idx])
                 offspring_pop[i, :, idx] += diff
             # 处理越界
             offspring_pop = np.clip(offspring_pop, self.problem.sub_prob.xl, self.problem.sub_prob.xu)
-            
             
             offspring_f, offspring_cv, offspring_scv = self.problem.evaluate(offspring_pop)
             # 合并父代和子代
@@ -301,10 +306,10 @@ class NSGA:
         return f, cv, scv
         
 if __name__ == "__main__":
-    prob = SharedComponents(ZDT1, n_var=30, same_idx=[])
-    nsga = NSGA(prob, pop_size=100, sub_pop_size=20)
+    prob = SharedComponents(ZDT1NoCV, n_var=30, same_idx=[])
+    nsga = NSGA(prob, pop_size=50, sub_pop_size=10)
     # np.set_printoptions(threshold=np.inf)
-    f, cv, scv = nsga.run(generations=200)
+    f, cv, scv = nsga.run(generations=60)
     
     x = np.array(nsga.history['x'][-1])
     data = pd.DataFrame(x.reshape(-1, x.shape[-1]), columns=[f"x{i}" for i in range(x.shape[-1])])
@@ -312,6 +317,20 @@ if __name__ == "__main__":
     data.to_csv(".\\data\\" + now.strftime("%Y_%m_%d_%H_%M_%S_") + "x.csv", index=False)
 
     print("目标函数值:", f)
-    print("约束违反量:", cv)
-    print("结构约束违反量:", scv)
+    print("约束违反量:", cv < 0)
+    print("结构约束违反量:", scv < 1e-9)
+    
+    pf = prob.sub_prob.pareto_front(100)
+    
+    plt.plot(pf[:, 0], pf[:, 1], label='ZDT1 Pareto Front')
+    
+    for sub_f in f:
+        plt.plot(sub_f[:, 0], sub_f[:, 1], linewidth=0.1)
+    
+    plt.xlabel("f1")
+    plt.ylabel("f2")
+    plt.title("ZDT1 Pareto Front")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
     

@@ -1,5 +1,3 @@
-
-
 import numpy as np
 
 class SharedComponents:
@@ -35,3 +33,23 @@ class SharedComponents:
         whole_scv = np.array(whole_scv)
         
         return whole_f, whole_cv, whole_scv
+    
+    def evaluate_scv(self, pop):
+        """计算所有子群个体的结构约束违反量"""
+        whole_scv = []
+        
+        for sub_pop in pop:
+            n = len(sub_pop)
+            cv_struct = np.zeros((n,))
+            
+            for i in range(n):
+                for j in range(i + 1, n):
+                    diff = abs(sub_pop[i][2] - sub_pop[j][2]) + abs(sub_pop[i][3] - sub_pop[j][3])
+                    cv_struct[i] += diff
+                    cv_struct[j] += diff
+        
+            whole_scv.append(cv_struct)
+        
+        whole_scv = np.array(whole_scv)
+        return whole_scv
+    
