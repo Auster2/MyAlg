@@ -5,6 +5,7 @@ class SharedComponents:
         self.sub_prob = sub_prob(n_var)
         self.n_constr = self.sub_prob.n_constr + 1  # 添加结构约束
         self.n_var = n_var
+        self.same_idx = same_idx
     
     def evaluate(self, pop):
         """计算所有子群个体的目标函数和约束"""
@@ -20,7 +21,8 @@ class SharedComponents:
             # 结构约束：对子群中每对个体 (i, j)
             for i in range(n):
                 for j in range(i + 1, n):
-                    diff = abs(sub_pop[i][2] - sub_pop[j][2]) + abs(sub_pop[i][3] - sub_pop[j][3])
+                    # diff = abs(sub_pop[i][2] - sub_pop[j][2]) + abs(sub_pop[i][3] - sub_pop[j][3])
+                    diff = np.sum(np.abs(sub_pop[i][self.same_idx] - sub_pop[j][self.same_idx]))
                     cv_struct[i] += diff
                     cv_struct[j] += diff  # 共享惩罚
             
@@ -44,7 +46,7 @@ class SharedComponents:
             
             for i in range(n):
                 for j in range(i + 1, n):
-                    diff = abs(sub_pop[i][2] - sub_pop[j][2]) + abs(sub_pop[i][3] - sub_pop[j][3])
+                    diff = np.sum(np.abs(sub_pop[i][self.same_idx] - sub_pop[j][self.same_idx]))
                     cv_struct[i] += diff
                     cv_struct[j] += diff
         

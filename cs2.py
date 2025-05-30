@@ -134,7 +134,7 @@ class NSGA:
         self.pop_size = pop_size
         self.sub_pop_size = sub_pop_size
         self.sub_alg = SubNSGA()
-        self.history = {'x': [], 'f': [], 'cv': [], 'scv': []}
+        self.history = {'x': [], 'f': [], 'cv': [], 'scv': [], 'hv' : []}
     
     def initialize_population(self):
         x = np.random.rand(self.pop_size, self.sub_pop_size, self.problem.sub_prob.n_var)
@@ -142,40 +142,14 @@ class NSGA:
         f, cv, scv = self.problem.evaluate(x)
         return x, f, cv, scv
     
-    def sort(self, f, cv, scv):
-        rank = np.array(range(len(f)))
-        comb = list(zip(rank, f, cv, scv))
-        """xxx"""
-        # sorted_comb = sorted(comb, key=lambda x : (np.sum(x[3]), np.sum(x[2][:, 0]), np.sum(x[2][:, 1]), np.sum(x[1][:, 0]), np.sum(x[1][:, 1])))
-        sorted_comb = sorted(comb, key=lambda x : (np.sum(x[2][:, 0]), np.sum(x[2][:, 1]), np.sum(x[3])))
+    def sort(self, hv, cv, scv):
+        rank = np.array(range(len(hv)))
+        comb = list(zip(rank, hv, cv, scv))
+        sorted_comb = sorted(comb, key=lambda x : (-x[1], np.sum(x[3])))
         sorted_rank = np.array([x[0] for x in sorted_comb])
         return sorted_rank
     
-    def tournament_selection(self, rank, n, k=2):
-        """锦标赛选择"""
-        selected = np.zeros(n, dtype=int)
-        
-        for i in range(n):
-            # 随机选择k个个体
-            candidates = np.random.randint(0, len(rank), k)
-            
-            # 选择非支配等级更低的个体，如果相同则选择拥挤度更大的
-            best = candidates[0]
-            for j in range(1, k):
-                if (rank[candidates[j]] < rank[best]):
-                    best = candidates[j]
-            
-            selected[i] = best
-        
-        return selected
-    
-    def randSelect(self, f, cv, scv, n, prob=0.5, k=2):
-        f_max = []
-        for i in range(self.problem.sub_prob.n_obj):
-            f_max.append(np.max(f[:, :, i]))
-        f_max = np.array(f_max)
-        hv_c = HV(ref_point=f_max)
-        hv = [hv_c.do(sub_f) for sub_f in f]
+    def randSelect(self, hv, cv, scv, n, prob=0.5, k=2):
         cv_sum = np.sum(cv, axis=(1, 2))
         scv_sum = np.sum(scv, axis=1)
         selected = np.zeros(n, dtype=int)
@@ -193,7 +167,7 @@ class NSGA:
                 candidates = np.random.randint(0, len(hv), k)
                 best = candidates[0]
                 for j in range(1, k):
-                    if hv[candidates[j]] < hv[best]:
+                    if hv[candidates[j]] > hv[best]:
                         best = candidates[j]
                 selected[i] = best
 
@@ -207,7 +181,7 @@ class NSGA:
             tmp_cv = np.vstack((cv[selected[i]], cv[selected[i + selected_len]]))
             tmp_x = np.vstack((x[selected[i]], x[selected[i + selected_len]]))
 
-            fronts, rank = self.sub_alg.fast_non_dominated_sort(tmp_f, tmp_cv)
+            fronts, _ = self.sub_alg.fast_non_dominated_sort(tmp_f, tmp_cv)
             selected_front = []
             for front in fronts:
                 if len(selected_front) + len(front) > self.sub_pop_size:
@@ -221,6 +195,14 @@ class NSGA:
 
     def run(self, generations=500):
         x, f, cv, scv = self.initialize_population()
+        
+        f_max = []
+        for i in range(self.problem.sub_prob.n_obj):
+            f_max.append(np.max(f[:, :, i]))
+        f_max = np.array(f_max)
+        hv_c = HV(ref_point=f_max)
+        hv = [hv_c.do(sub_f) for sub_f in f]
+        
         for gen in range(generations):
             if gen % 10 == 0:
                 print(f"Generation {gen}:")
@@ -228,25 +210,12 @@ class NSGA:
                 print(f"结构可行个体比例: {count_negative / (self.pop_size * self.sub_pop_size)}")
                 count_all_negative = np.sum(np.all(scv <= 1e-9, axis=1))
                 print(f"结构可行子种群比例: {count_all_negative / self.pop_size}")
-            # rank = self.sort(f, cv, scv)
-            # print("排序后的个体:", rank)
-            # selected = self.tournament_selection(rank, self.pop_size)
-            # print("选择的个体:", selected)
-            selected = self.randSelect(f, cv, scv, self.pop_size*2)
+            
+                
+            selected = self.randSelect(hv, cv, scv, self.pop_size*2)
             offspring_pop = self.crossover(x, f, cv, selected)
             
-            # offspring_pop = x[selected]
-            # print(offspring_pop[:, :, 0])
-
-            # for i in range(self.pop_size):
-            #     for j in range(0, self.sub_pop_size-1, 2):
-            #         if (offspring_pop_scv[i][j] < offspring_pop_scv[i][j + 1]):
-            #             offspring_pop[i][j+1] = offspring_pop[i][j] * 0.7 + offspring_pop[i][j+1] * 0.3
-            #         else:
-            #             offspring_pop[i][j] = offspring_pop[i][j] * 0.3 + offspring_pop[i][j+1] * 0.7
-                        
-            # 变异
-            prob = np.random.rand(self.pop_size, self.sub_pop_size, self.problem.sub_prob.n_var)
+            # prob = np.random.rand(self.pop_size, self.sub_pop_size, self.problem.sub_prob.n_var)
             # offspring_pop += (np.random.randint(0, 1) - 0.5) * prob * (self.problem.sub_prob.xu - self.problem.sub_prob.xl) * 0.1
             for i in range(self.pop_size):
                 idx = np.random.randint(0, self.problem.n_var)
@@ -262,24 +231,34 @@ class NSGA:
             combined_cv = np.concatenate((cv, offspring_cv), axis=0)
             combined_scv = np.concatenate((scv, offspring_scv), axis=0)
             
+            f_max = []
+            for i in range(self.problem.sub_prob.n_obj):
+                f_max.append(np.max(combined_f[:, :, i]))
+            f_max = np.array(f_max)
+            hv_c = HV(ref_point=f_max)
+            combined_hv = [hv_c.do(sub_f) for sub_f in combined_f]
+            combined_hv = np.array(combined_hv)
+            
             # 重新排序
             # combined_rank = self.sort(combined_f, combined_cv, combined_scv)
 
             # 选择前pop_size个个体
             # selected_combined = combined_rank[:self.pop_size]
 
-            selected_combined = self.randSelect(combined_f, combined_cv, combined_scv, self.pop_size)
+            selected_combined = self.sort(combined_hv, combined_cv, combined_scv)[:self.pop_size]
 
             x = combined_pop[selected_combined]
             f = combined_f[selected_combined]
             cv = combined_cv[selected_combined]
             scv = combined_scv[selected_combined]
+            hv = combined_hv[selected_combined]
             
             # 记录历史
             self.history['x'].append(x.copy())
             self.history['f'].append(f.copy())
             self.history['cv'].append(cv.copy())
             self.history['scv'].append(scv.copy())
+            self.history['hv'].append(hv.copy())
             
         
         # data = np.array(self.history['scv'])
