@@ -61,6 +61,7 @@ class DTLZ2:
     def __init__(self, n_var=12, n_obj=3):
         self.n_var = n_var
         self.n_obj = n_obj
+        self.n_constr = 0  # 基本约束数量（不包括结构约束）
         self.k = n_var - n_obj + 1
         self.xl = np.zeros(n_var)
         self.xu = np.ones(n_var)
@@ -77,7 +78,7 @@ class DTLZ2:
             if i > 0:
                 f[:, i] *= np.sin(x[:, self.n_obj - i - 1] * 0.5 * np.pi)
             f[:, i] *= (1 + g)
-        return f, None
+        return f, np.zeros((x.shape[0], 1))
 
     def pareto_front(self, n_points=100):
         from scipy.stats import qmc

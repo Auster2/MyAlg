@@ -5,9 +5,10 @@ from problem.sc_prob import *
 import pandas as pd
 from datetime import datetime
 from pymoo.indicators.hv import HV
+from utils import *
 
 plt.rcParams['font.sans-serif'] = ['Microsoft YaHei']  # 设置中文字体
- 
+
 class SubNSGA:
     def fast_non_dominated_sort(self, f, cv):
         """快速非支配排序（考虑约束）"""
@@ -145,7 +146,7 @@ class NSGA:
     def sort(self, hv, cv, scv):
         rank = np.array(range(len(hv)))
         comb = list(zip(rank, hv, cv, scv))
-        sorted_comb = sorted(comb, key=lambda x : (-x[1], np.sum(x[3])))
+        sorted_comb = sorted(comb, key=lambda x : (np.sum(x[3]), -x[1]))
         sorted_rank = np.array([x[0] for x in sorted_comb])
         return sorted_rank
     
@@ -200,7 +201,8 @@ class NSGA:
         for i in range(self.problem.sub_prob.n_obj):
             f_max.append(np.max(f[:, :, i]))
         f_max = np.array(f_max)
-        hv_c = HV(ref_point=f_max)
+        f_history_max = f_max
+        hv_c = HV(ref_point=f_history_max)
         hv = [hv_c.do(sub_f) for sub_f in f]
         
         for gen in range(generations):
@@ -215,11 +217,11 @@ class NSGA:
             selected = self.randSelect(hv, cv, scv, self.pop_size*2)
             offspring_pop = self.crossover(x, f, cv, selected)
             
-            # prob = np.random.rand(self.pop_size, self.sub_pop_size, self.problem.sub_prob.n_var)
+            prob = np.random.rand(self.pop_size, self.sub_pop_size, self.problem.sub_prob.n_var)
             # offspring_pop += (np.random.randint(0, 1) - 0.5) * prob * (self.problem.sub_prob.xu - self.problem.sub_prob.xl) * 0.1
             for i in range(self.pop_size):
                 idx = np.random.randint(0, self.problem.n_var)
-                diff = (np.random.randint(0, 1) - 0.5) * np.random.rand() * (self.problem.sub_prob.xu[idx] - self.problem.sub_prob.xl[idx])
+                diff = (np.random.randint(0, 1) - 0.5) * np.random.rand() * (self.problem.sub_prob.xu[idx] - self.problem.sub_prob.xl[idx]) * 0.1
                 offspring_pop[i, :, idx] += diff
             # 处理越界
             offspring_pop = np.clip(offspring_pop, self.problem.sub_prob.xl, self.problem.sub_prob.xu)
@@ -235,15 +237,10 @@ class NSGA:
             for i in range(self.problem.sub_prob.n_obj):
                 f_max.append(np.max(combined_f[:, :, i]))
             f_max = np.array(f_max)
+            f_history_max = np.maximum(f_max, f_history_max)
             hv_c = HV(ref_point=f_max)
             combined_hv = [hv_c.do(sub_f) for sub_f in combined_f]
             combined_hv = np.array(combined_hv)
-            
-            # 重新排序
-            # combined_rank = self.sort(combined_f, combined_cv, combined_scv)
-
-            # 选择前pop_size个个体
-            # selected_combined = combined_rank[:self.pop_size]
 
             selected_combined = self.sort(combined_hv, combined_cv, combined_scv)[:self.pop_size]
 
@@ -259,57 +256,5 @@ class NSGA:
             self.history['cv'].append(cv.copy())
             self.history['scv'].append(scv.copy())
             self.history['hv'].append(hv.copy())
-            
-        
-        # data = np.array(self.history['scv'])
-        # # 创建 3D 图像
-        # fig = plt.figure(figsize=(10, 8))
-        # ax = fig.add_subplot(111, projection='3d')
-
-        # # 遍历第一个维度（50 个点）
-        # for i in range(0, data.shape[0]):
-        #     # 获取第 i 个 x 轴点的数据
-        #     x = np.full(data.shape[1] * data.shape[2], i)  # x 轴值，重复 100×50 次
-        #     y = np.tile(np.arange(data.shape[1]), data.shape[2])  # y 轴值，重复 50 次
-        #     z = data[i, :, :].flatten()  # 将 100×50 的数据展平为 1D
-
-        #     # 绘制散点图
-        #     ax.scatter(x, y, z, alpha=0.5)
-
-        # # 设置坐标轴标签
-        # ax.set_xlabel('X axis (50 points)')
-        # ax.set_ylabel('Y axis (100 points)')
-        # ax.set_zlabel('Z axis (50 points)')
-        # plt.show()
         
         return f, cv, scv
-        
-if __name__ == "__main__":
-    prob = SharedComponents(ZDT1NoCV, n_var=30, same_idx=[])
-    nsga = NSGA(prob, pop_size=50, sub_pop_size=10)
-    # np.set_printoptions(threshold=np.inf)
-    f, cv, scv = nsga.run(generations=60)
-    
-    x = np.array(nsga.history['x'][-1])
-    data = pd.DataFrame(x.reshape(-1, x.shape[-1]), columns=[f"x{i}" for i in range(x.shape[-1])])
-    now = datetime.now()
-    data.to_csv(".\\data\\" + now.strftime("%Y_%m_%d_%H_%M_%S_") + "x.csv", index=False)
-
-    print("目标函数值:", f)
-    print("约束违反量:", cv < 0)
-    print("结构约束违反量:", scv < 1e-9)
-    
-    pf = prob.sub_prob.pareto_front(100)
-    
-    plt.plot(pf[:, 0], pf[:, 1], label='ZDT1 Pareto Front')
-    
-    for sub_f in f:
-        plt.plot(sub_f[:, 0], sub_f[:, 1], linewidth=0.1)
-    
-    plt.xlabel("f1")
-    plt.ylabel("f2")
-    plt.title("ZDT1 Pareto Front")
-    plt.grid(True)
-    plt.legend()
-    plt.show()
-    

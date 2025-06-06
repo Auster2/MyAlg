@@ -70,12 +70,31 @@
 
 '''np.max'''
 
+# import numpy as np
+
+# f = np.array([[[1, 2], [3, 8]], [[5, 4], [0, 4]]])
+
+# x1 = np.max(f[:, :, 0])
+# x2 = np.max(f[:, :, 1])
+
+# print("max x1: ", x1)
+# print("max x2: ", x2)
+
+'''list to string'''
+
+# same_idx = [1, 2]
+# print(str(same_idx))
+
+'''list /, max'''
+
 import numpy as np
 
-f = np.array([[[1, 2], [3, 8]], [[5, 4], [0, 4]]])
+x = [[1, 2, 3], [1, 2, 3]]
+y = [[3, 4, 48], [4, 18, 99]]
 
-x1 = np.max(f[:, :, 0])
-x2 = np.max(f[:, :, 1])
+x = np.array(x)
+y = np.array(y)
 
-print("max x1: ", x1)
-print("max x2: ", x2)
+print(y / x)
+
+print(np.maximum(x, y))
