@@ -1,63 +1,79 @@
-$$
-\begin{bmatrix}
-    x_{11} & x_{12} & x_{13} \\
-    x_{21} & x_{22} & x_{23} \\
-    x_{31} & x_{32} & x_{33} \\
-    \vdots & \vdots & \vdots \\
-    x_{n1} & x_{n2} & x_{n3}
-\end{bmatrix} \cdot 
-\begin{bmatrix}
-    a_1 & a_2 & a_3 \\
-    b_1 & b_2 & b_3 \\
-    c_1 & c_2 & c_3
-\end{bmatrix} = 
-\begin{bmatrix}
-    y_{11} & y_{12} & y_{13} \\
-    y_{21} & y_{22} & y_{23} \\
-    y_{31} & y_{32} & y_{33} \\
-    \vdots & \vdots & \vdots \\
-    y_{n1} & y_{n2} & y_{n3}
-\end{bmatrix} \\
-X \cdot A = Y
-$$
+\documentclass{article}
+\usepackage{amsmath, amssymb, amsthm, mathtools}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{cite}  % 引入 citation 包
 
-我能否训练一个模型 $A$ , 通过Y的structure constraints value，训练出一个适合的A
+\title{Structure-Constrained Multi-Objective Optimization Problems (SCMOP)}
+\author{}
+\date{}
 
-```py
-def evaluate_loss(self, Ys):
-    loss = []
-    
-    for Y in Ys:
-        n = len(Y)
-        sub_loss = np.zeros((n,))
+\begin{document}
 
-        for i in range(n):
-            for j in range(i + 1, n):
-                diff = abs(Y[i][1] - Y[j][1]) + abs(Y[i][2] - Y[j][2])
-                sub_loss[i] += diff
-                sub_loss[j] += diff
-    
-        loss.append(sub_loss)
-    
-    loss = np.array(loss)
-    return loss
-```
+\maketitle
 
-我发现上面的代码是通过无限缩小A来减小方差，这样是无效的，有没有办法避免？
-而且我把问题改成
-def structure_constraint(Y):
-    return torch.sum(torch.abs(Y[:, 2] - 2 * Y[:, 0]))
-后，按道理来说是有解的，但是A总是在2.几不会继续减小，是为什么呢
-Epoch 99100, Structure Loss: 2.3343
-Epoch 99200, Structure Loss: 2.3446
-Epoch 99300, Structure Loss: 2.3278
-Epoch 99400, Structure Loss: 2.3578
-Epoch 99500, Structure Loss: 2.3665
-Epoch 99600, Structure Loss: 2.3404
-Epoch 99700, Structure Loss: 2.3400
-Epoch 99800, Structure Loss: 2.3397
-Epoch 99900, Structure Loss: 2.3400
+\section{Structure-Constrained Multi-Objective Optimization Problems}
+    \subsection{Traditional Multi-objective Optimization Problems (MOPs)} 
+    Multi-objective optimization problems (MOPs) involve the simultaneous optimization of multiple conflicting objectives. Given a decision space $\mathcal{X} \subseteq \mathbb{R}^n$ and an objective function $\mathbf{f} : \mathcal{X} \to \mathbb{R}^m$, a standard MOP is formulated as:
+    \begin{equation}
+    \min_{x \in \mathcal{X}} \; \mathbf{f}(x) = [f_1(x), f_2(x), \dots, f_m(x)]^\top,
+    \label{eq:standard_moo}
+    \end{equation}
+    Due to the inherent conflicts among the objectives, a single globally optimal solution rarely exists. Instead, the solution is characterized by a set of non-dominated solutions, known as the Pareto-optimal set, denoted by $\mathcal{P}^* \subseteq \mathcal{X}$. The image of this set under the mapping $\mathbf{f}$ is referred to as the Pareto front, denoted by $\mathcal{F}^* = \{ \mathbf{f}(x) \mid x \in \mathcal{P}^* \}$.
 
-# A = torch.nn.Parameter(torch.tensor([[1.0, 1.0, 2.0],
-#                                     [1.0, 1.0, 2.0],
-#                                     [1.0, 1.0, 2.0]], dtype=torch.float32))
+    Classical multi-objective optimization primarily focuses on approximating $\mathcal{F}^*$ using a set of solutions that are diverse and convergent. However, in many practical applications, the structure of the solution set itself plays an important role and may be subject to additional constraints.
+
+    \subsection{Structure-Constrained Multi-objective Optimization Problems (SCMOP)}
+    In a variety of domains, such as product design, autonomous systems, or neural architecture search, solutions are not deployed in isolation. Rather, a set of solutions is selected and used jointly. In such contexts, it is often desirable for the selected solution set to exhibit certain structural properties, such as common components, coordinated variable patterns, or functional consistency. These requirements motivate the study of structure-constrained multi-objective optimization, in which the optimization objective is to identify a high-quality set of solutions that also adheres to domain-specific structural constraints.
+
+    Let $\mathcal{S} \subseteq \mathcal{X}$ denote a candidate solution set with fixed cardinality $|\mathcal{S}| = K$. The objective is to select such a set $\mathcal{S}$ that achieves high performance in the objective space while satisfying predefined structure constraints. This leads to the following formulation:
+    \begin{equation}
+    \begin{aligned}
+    \max_{\mathcal{S} \subseteq \mathcal{X}} \quad & Q(\mathcal{S}) \\
+    \text{subject to} \quad & |\mathcal{S}| = K, \\
+                            & g(\mathcal{S}) \leq 0,\\
+                            & h(\mathcal{S}) = 0, \\
+    \end{aligned}
+    \label{eq:scmoo}
+    \end{equation}
+    where $Q(\mathcal{S})$ is a performance indicator measuring the quality of the solution set $\mathcal{S}$ in the objective space. Common choices include hypervolume (HV), inverted generational distance (IGD), or other performance metrics. $g(\mathcal{S})$ and $h(\mathcal{S})$ denote the structure inequality and equality constraints, respectively. 
+
+    Clearly, this formulation generalizes classical MOP by shifting the focus from the optimization of individual solutions to the selection of structurally consistent solution sets.
+
+    \subsection{Examples of Structure Constraints}
+    The structure constraints imposed on the solution set $\mathcal{S}$ can take various forms depending on the characteristics of the application domain. These constraints typically reflect desired regularities, dependencies, or shared features among the solutions. Below, we outline two representative types of structure constraints.
+
+    \begin{itemize}
+        \item \textbf{Shared Variable Constraint:}  
+        In certain applications, it is required that all solutions in the set $\mathcal{S}$ share common values for specific decision variables. For example, in modular product design or manufacturing, a common component or configuration may be preferred across all selected solutions. Let $k \in \{1, \dots, n\}$ denote the index of a decision variable to be shared. The variable shared structure constraint is expressed as:
+        \begin{equation}
+            h(\mathcal{S}) = \sum_{x \in \mathcal{S}} \left| x_k - \bar{x}_k \right|=0, 
+        \end{equation}
+        where $\bar{x}_k = \frac{1}{K} \sum_{x' \in \mathcal{S}} x_k'$ is the mean value of variable $x_k$ across all solutions in the set. The constraint can be extended to multiple dimensions by aggregating across all designated indices.
+
+        \item \textbf{Functional Dependency Constraint:}  
+        In some problem domains, specific decision variables are expected to be determined by a functional relationship with others. Let $x_k$ be a decision variable that follows a deterministic mapping $x_k = g(x_1, x_2, \dots, x_{k-1}; \theta)$, where $g$ is a known function and $\theta$ is a fixed parameter shared within the set. The corresponding structure constraint can be defined as:
+        \begin{equation}
+            h(\mathcal{S}) = \sum_{x \in \mathcal{S}} \left| x_k - g(x_1, \dots, x_{k-1}; \theta) \right|=0,
+            \label{eq:csshared}
+        \end{equation}
+        This constraint enforces functional coherence within the solution set by ensuring that all solutions respect a common generative rule. It is particularly relevant in settings where part of the design space is governed by physical laws, domain knowledge, or predefined architectural rules.
+    \end{itemize}
+
+    \subsection{Implications and Challenges of SCMOP}
+    The introduction of structure constraints fundamentally transforms the nature of multi-objective optimization. Unlike classical MOP, where solutions are evaluated independently, SCMOP must consider interactions and dependencies among solutions within a set. This shift induces several significant challenges:
+    \begin{itemize}
+        \item \textit{Non-separability of evaluation:} The quality of an individual solution depends on the collective behavior of the entire set. This violates the assumption of independent evaluation and renders traditional selection and update strategies less effective.    
+        \item \textit{Increased combinatorial complexity:} The optimization process must simultaneously ensure Pareto-optimality and structural feasibility at the set level. This results in a substantially larger and more intricate search space, particularly when the constraints induce coupling among decision variables.   
+        \item \textit{Constraint handling:} Structural constraints are often non-convex, discontinuous, or implicitly defined. As a result, they are difficult to encode and enforce using standard constraint-handling techniques, necessitating the development of specialized structure constraint handling techniques.  
+        \item \textit{Lack of benchmark instances:} Existing MOP benchmarks typically focus on convergence and diversity in the objective space without considering structural properties. The absence of widely accepted SCMOP benchmarks limits the evaluation and comparison of algorithmic approaches.   
+        \item \textit{Limited algorithmic support:} Currently, there are few optimization algorithms specifically designed to address the dual requirements of objective performance and structural consistency. Most existing MOO methods are not directly applicable or effective under structure constraints, highlighting a significant gap in the literature.
+    \end{itemize}
+    These challenges suggest that SCMOP is a non-trivial generalization of classical MOP and demands novel theoretical models, algorithmic frameworks, and evaluation protocols.
+
+    \subsection{SCMOP Benchmark Instances}
+    Structure-constrained multi-objective optimization problems (SCMOPs) present significant challenges in both formulation and solution. The lack of widely accepted benchmark instances for SCMOPs has hindered the development and evaluation of algorithms designed to solve them. Recently, work on addressing structure constraints in evolutionary Pareto set learning has suggested the importance of benchmarks specifically designed for this type of optimization problem \cite{dealing_structure_constraints}. These instances focus on structure-constrained optimization and provide a foundation for further exploration of SCMOP algorithms.
+
+\bibliographystyle{plain}
+\bibliography{references}
+\end{document}

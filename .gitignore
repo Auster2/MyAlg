@@ -1,4 +1,5 @@
 data/
-utils/
+old_data/
+*.csv
 *.zip
 *.md

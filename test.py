@@ -87,14 +87,65 @@
 
 '''list /, max'''
 
+# import numpy as np
+
+# x = [[1, 2, 3], [1, 2, 3]]
+# y = [[3, 4, 48], [4, 18, 99]]
+
+# x = np.array(x)
+# y = np.array(y)
+
+# print(y / x)
+
+# print(np.maximum(x, y))
+
+'''evaluate'''
+
+import torch
 import numpy as np
 
-x = [[1, 2, 3], [1, 2, 3]]
-y = [[3, 4, 48], [4, 18, 99]]
+def evaluate1(x):
+    """计算目标函数值和约束违反量"""
+    if len(x.shape) == 1:
+        x = x.reshape(1, -1)
+    
+    f = np.zeros((x.shape[0], 2))
+    
+    g = 1.0 + 9.0 * np.sum(x[:, 1:], axis=1) / (x.shape[1] - 1)
+    f[:, 0] = x[:, 0]
+    f[:, 1] = g * (1 - np.sqrt(x[:, 0] / g))
 
-x = np.array(x)
-y = np.array(y)
+    return f
 
-print(y / x)
+def evaluate2(x):
+    n = x.shape[1]
+    
+    sum1 =  torch.sum(torch.stack([x[:,i+1] for i in range(n - 1)]), axis = 0)
+    g = 1 + 9 * sum1 / (n - 1)
+    
+    f1 = x[:,0]
+    f2 =  g * ( 1 - torch.sqrt(x[:,0]/g))   
+        
+    objs = torch.stack([f1,f2]).T
+    
+    return objs
 
-print(np.maximum(x, y))
+# 比较两个输出格式
+def compare_outputs(output1, output2):
+    if isinstance(output1, np.ndarray) and isinstance(output2, np.ndarray):
+        return np.array_equal(output1, output2)
+    elif isinstance(output1, torch.Tensor) and isinstance(output2, torch.Tensor):
+        return torch.equal(output1, output2)
+    else:
+        return False
+    
+# 测试 evaluate 函数
+x = np.array([[0.5, 0.2, 0.3],
+                [0.1, 0.4, 0.5],
+                [0.8, 0.1, 0.1]])
+output1 = torch.tensor(evaluate1(x), dtype=torch.float32)
+output2 = evaluate2(torch.tensor(x, dtype=torch.float32))
+print("Output 1:", output1)
+print("Output 2:", output2)
+# 检查两个输出是否相同
+print("Outputs are equal:", compare_outputs(output1, output2))

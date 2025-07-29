@@ -1,0 +1,179 @@
+
+
+\def\CTeXPreproc{Created by ctex v0.2.14, don't edit!}\documentclass[journal]{IEEEtran}
+
+% *** GRAPHICS RELATED PACKAGES ***
+\ifCLASSINFOpdf
+\usepackage[pdftex]{graphicx}
+\usepackage{graphicx}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\graphicspath{../png/}
+\DeclareGraphicsExtensions{.png}
+
+% *** SUBFIG RELATED PACKAGES ***
+\ifCLASSOPTIONcompsoc
+\usepackage[caption=false,font=normalsize,labelfont=sf,textfont=sf]{subfig}
+\else
+\usepackage[caption=false,,font=footnotesize]{subfig}
+\fi
+
+\usepackage{stfloats}
+
+\usepackage{cite}
+
+\usepackage{url}
+\usepackage{breakurl}
+%%%%%%%%%%%%
+
+
+%% \documentclass[final,3p,times,twocolumn]{elsarticle}
+%% \documentclass[final,5p,times]{elsarticle}
+%% \documentclass[final,5p,times,twocolumn]{elsarticle}
+%% if you use PostScript figures in your article
+%% use the graphics package for simple commands
+%% \usepackage{graphics}
+%% or use the graphicx package for more complicated commands
+%% \usepackage{graphicx}
+%% or use the epsfig package if you prefer to use the old commands
+%% \usepackage{epsfig}
+\usepackage{graphics}
+\usepackage{epstopdf}
+\usepackage{graphicx,array}
+%\usepackage{picins}
+\usepackage{graphicx}
+%% The amssymb package provides various useful mathematical symbols
+%\usepackage{amssymb}
+% \usepackage{graphicx,array}
+\usepackage{amssymb,amsmath}
+%\usepackage{picins}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{color}
+\usepackage{changepage}
+\usepackage{cite}
+\usepackage{colortbl}
+\usepackage{bm}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{longtable}
+%\usepackage{hyperref}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proof}{Proof}[section]
+% \usepackage{algorithm}
+% \usepackage{algpseudocode}
+
+
+%\numberwithin{equation}{section}
+%\usepackage{makecell}
+
+
+\newcolumntype{I}{!{\vrule width 3pt}}
+\newlength\savedwidth
+\newcommand\whline{\noalign{\global\savedwidth\arrayrulewidth
+                            \global\arrayrulewidth 3pt}%
+                   \hline
+                   \noalign{\global\arrayrulewidth\savedwidth}}
+\newlength\savewidth
+\newcommand\shline{\noalign{\global\savewidth\arrayrulewidth
+                            \global\arrayrulewidth 1.5pt}%
+                   \hline
+                   \noalign{\global\arrayrulewidth\savewidth}}
+
+
+% \numberwithin{equation}{section}
+
+%%%%%%%%%%%
+
+\hyphenation{op-tical net-works semi-conduc-tor}
+
+\begin{document}
+
+\title{Title}
+
+\author{
+\IEEEauthorblockN{author}
+}
+
+\markboth{IEEE TRANSACTIONS ON Evolutionary Computation}
+{Shell \MakeLowercase{\textit{et al.}}: Bare Demo of IEEEtran.cls for IEEE Journals}
+\maketitle
+
+
+\begin{abstract}
+abstract
+\end{abstract}
+
+
+\begin{IEEEkeywords}
+IEEEkeywords
+\end{IEEEkeywords}
+\IEEEpeerreviewmaketitle
+
+
+\section{Introduction}
+
+\section*{Structure-Constrained Multi-Objective Optimization}
+
+In traditional multi-objective optimization (MOO), the goal is to find a set of non-dominated solutions $x \in \mathcal{X} \subseteq \mathbb{R}^n$, where the vector of objective functions $\mathbf{f}(x) = [f_1(x), f_2(x), \dots, f_m(x)]^\top$ represents multiple conflicting criteria. The canonical formulation is:
+
+\begin{equation}
+\min_{x \in \mathcal{X}} \quad \mathbf{f}(x)
+\label{eq:standard_mop}
+\end{equation}
+
+The optimal outcome is not a single point but a set of trade-off solutions, commonly referred to as the Pareto front. Let  denote such a solution set.
+
+\subsection*{Motivation for Structure Constraints}
+
+In many real-world applications, solution sets are expected to exhibit internal consistency or structural regularities—such as component reuse, functional alignment, or shared submodules—to enhance feasibility, reusability, or interpretability. To incorporate such preferences, we impose \emph{structure constraints} over the solution set $\mathcal{S}$.
+
+\subsection*{Defination of Structure Constrained Multi-objective Problem}
+
+The goal of this problem is to determine a subset $\mathcal{S}$ of the set $\mathcal{X}$, where the subset $\mathcal{S}$ contains exactly $\mathcal{K}$ elements. Let $\mathcal{C}(\mathcal{S}) \geq 0$ denote a structure penalty function measuring the degree of structural violation in a candidate solution set. We aim to maximize an evaluation score (e.g., hypervolume) under structural constraints:
+
+\begin{equation}
+\begin{aligned}
+\max_{\mathcal{S} \subseteq \mathcal{X}} \quad & \text{HV}(\mathcal{S}) \\
+\text{s.t.} \quad & \mathcal{C}(\mathcal{S}) \leq \varepsilon
+\end{aligned}
+\label{eq:score_problem}
+\end{equation}
+
+where $\varepsilon \geq 0$ is a small threshold (possibly zero). 
+
+\subsection*{Examples of Structure Constraints}
+
+\begin{itemize}
+  \item \textbf{Shared Variable Constraint:}  
+  In some domains, it is desirable that all solutions in a set share common values in certain decision dimensions (e.g., shared modules or configurations).  
+  For instance, if we require that all solutions in $\mathcal{S}$ share the same value for $x_k$, we define:
+
+  \[
+  \mathcal{C}_{\text{share}}(\mathcal{S}) = \sum_{i=1}^{|\mathcal{S}|} \left| x_k^{(i)} - \bar{x}_k \right|, \quad \bar{x}_k = \frac{1}{|\mathcal{S}|} \sum_{j=1}^{|\mathcal{S}|} x_k^{(j)}
+  \]
+
+  This can be naturally extended to multiple dimensions $x_{k}, x_{k+1}, \dots, x_{k+r}$ by summing across all relevant indices.
+
+  \textit{Note:} Across different solution sets, the shared value $\bar{x}_k$ may vary, but within a single set it should be consistent.
+
+  \item \textbf{Functional Dependency Constraint:}  
+  Suppose a particular dimension $x_k$ is expected to be a deterministic function of preceding dimensions:  
+  \[
+  x_k = g(x_1, x_2, \dots, x_{k-1}; \theta)
+  \]
+  Here, $\theta$ is a structure-specific parameter that may differ across solution sets but is consistent within a set. The corresponding constraint penalty is:
+
+  \[
+  \mathcal{C}_{\text{func}}(\mathcal{S}) = \sum_{x \in \mathcal{S}} \left| x_k - g(x_1, \dots, x_{k-1}; \theta) \right|
+  \]
+
+  This enforces functional coherence, where solutions are structurally bound by a shared generative rule.
+
+\end{itemize}
+
+\end{document}
